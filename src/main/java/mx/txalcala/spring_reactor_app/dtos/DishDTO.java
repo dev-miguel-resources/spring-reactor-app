@@ -1,7 +1,6 @@
 package mx.txalcala.spring_reactor_app.dtos;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -10,7 +9,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-// revisar las validaciones como tarea
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -19,8 +17,8 @@ public class DishDTO {
 
     private String id;
 
-    @NotNull
-    @Size(min = 2, max = 20) // message = ""
+    @NotNull()
+    @Size(min = 2, max = 20) // , message = ""
     private String nameDish;
 
     @NotNull
@@ -30,5 +28,4 @@ public class DishDTO {
 
     @NotNull
     private Boolean statusDish;
-
 }

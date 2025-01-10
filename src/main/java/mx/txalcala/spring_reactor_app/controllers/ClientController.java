@@ -18,9 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import mx.txalcala.spring_reactor_app.dtos.DishDTO;
-import mx.txalcala.spring_reactor_app.models.Dish;
-import mx.txalcala.spring_reactor_app.services.IDishService;
+import mx.txalcala.spring_reactor_app.dtos.ClientDTO;
+import mx.txalcala.spring_reactor_app.models.Client;
+import mx.txalcala.spring_reactor_app.services.IClientService;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -28,28 +28,28 @@ import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 
 @RestController
-@RequestMapping("/dishes")
+@RequestMapping("/clients")
 @RequiredArgsConstructor
-public class DishController {
+public class ClientController {
 
-    private static final Logger log = LoggerFactory.getLogger(DishController.class);
+    private static final Logger log = LoggerFactory.getLogger(ClientController.class);
 
-    private final IDishService service;
+    private final IClientService service;
 
-    @Qualifier("defaultMapper")
+    @Qualifier("clientMapper")
     private final ModelMapper modelMapper;
 
-    private DishDTO convertToDto(Dish model) {
-        return modelMapper.map(model, DishDTO.class);
+    private ClientDTO convertToDto(Client model) {
+        return modelMapper.map(model, ClientDTO.class);
     }
 
-    private Dish convertToDocument(DishDTO dto) {
-        return modelMapper.map(dto, Dish.class);
+    private Client convertToDocument(ClientDTO dto) {
+        return modelMapper.map(dto, Client.class);
     }
 
     @GetMapping()
-    public Mono<ResponseEntity<Flux<DishDTO>>> findAll() {
-        Flux<DishDTO> fx = service.findAll().map(this::convertToDto); // e -> convertToDto(e)
+    public Mono<ResponseEntity<Flux<ClientDTO>>> findAll() {
+        Flux<ClientDTO> fx = service.findAll().map(this::convertToDto); // e -> convertToDto(e)
 
         return Mono.just(ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
@@ -57,7 +57,7 @@ public class DishController {
     }
 
     @PostMapping
-    public Mono<ResponseEntity<DishDTO>> save(@Valid @RequestBody DishDTO dto, final ServerHttpRequest req) {
+    public Mono<ResponseEntity<ClientDTO>> save(@Valid @RequestBody ClientDTO dto, final ServerHttpRequest req) {
         return service.save(convertToDocument(dto))
                 .map(this::convertToDto)
                 .map(e -> ResponseEntity.created(
@@ -76,8 +76,8 @@ public class DishController {
     }
 
     @GetMapping("/{id}")
-    public Mono<ResponseEntity<DishDTO>> findById(@PathVariable("id") String id) {
-        return service.findById(id) // Mono<Dish>
+    public Mono<ResponseEntity<ClientDTO>> findById(@PathVariable("id") String id) {
+        return service.findById(id) // Mono<Client>
                 .map(this::convertToDto)
                 .map(e -> ResponseEntity.ok()
                         .contentType(MediaType.APPLICATION_JSON)
@@ -86,7 +86,7 @@ public class DishController {
     }
 
     @PutMapping("/{id}")
-    public Mono<ResponseEntity<DishDTO>> update(@Valid @PathVariable("id") String id, @RequestBody DishDTO dto) {
+    public Mono<ResponseEntity<ClientDTO>> update(@Valid @PathVariable("id") String id, @RequestBody ClientDTO dto) {
         return Mono.just(dto)
                 .map(e -> {
                     e.setId(id);
