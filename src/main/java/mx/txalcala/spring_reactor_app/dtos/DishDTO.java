@@ -18,7 +18,7 @@ public class DishDTO {
     private String id;
 
     @NotNull()
-    @Size(min = 2, max = 20) // , message = ""
+    @Size(min = 2, max = 20, message = "El nombre debe tener entre 2 y 20 caracteres") // , message = ""
     private String nameDish;
 
     @NotNull
