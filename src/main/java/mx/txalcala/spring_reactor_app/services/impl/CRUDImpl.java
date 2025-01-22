@@ -1,5 +1,8 @@
 package mx.txalcala.spring_reactor_app.services.impl;
 
+import org.springframework.data.domain.Pageable;
+
+import mx.txalcala.spring_reactor_app.pagination.PageSupport;
 import mx.txalcala.spring_reactor_app.repositories.IGenericRepo;
 import mx.txalcala.spring_reactor_app.services.ICRUD;
 import reactor.core.publisher.Flux;
@@ -40,6 +43,22 @@ public abstract class CRUDImpl<T, ID> implements ICRUD<T, ID> {
                         return Mono.just(false);
                     }
                 });
+    }
+
+    @Override
+    public Mono<PageSupport<T>> getPage(Pageable pageable) {
+        return getRepo().findAll()
+                .collectList()
+                .map(list -> new PageSupport<>(
+                        // 1,2,3,4,5,6,7,8,9,10
+                        // pageNumber = 0
+                        // pageSize = 2
+                        list.stream()
+                                .skip(pageable.getPageNumber() * pageable.getPageSize())
+                                .limit(pageable.getPageSize()).toList(),
+                        pageable.getPageNumber(),
+                        pageable.getPageSize(),
+                        list.size()));
     }
 
 }
