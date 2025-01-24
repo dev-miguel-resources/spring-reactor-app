@@ -4,6 +4,7 @@ import java.net.URI;
 
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -14,12 +15,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import mx.txalcala.spring_reactor_app.dtos.DishDTO;
+import mx.txalcala.spring_reactor_app.dtos.InvoiceDTO;
 import mx.txalcala.spring_reactor_app.models.Dish;
+import mx.txalcala.spring_reactor_app.pagination.PageSupport;
 import mx.txalcala.spring_reactor_app.services.IDishService;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -112,6 +116,23 @@ public class DishController {
                         return Mono.just(ResponseEntity.notFound().build()); // Mono<ResponseEntity<Void>>
                     }
                 });
+    }
+
+    @GetMapping("/pageable")
+    public Mono<ResponseEntity<PageSupport<DishDTO>>> getPage(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "page", defaultValue = "2") int size) {
+        return service.getPage(PageRequest.of(page, size))
+                .map(pageSupport -> new PageSupport<>(
+                        pageSupport.getContent().stream().map(this::convertToDto).toList(),
+                        pageSupport.getPageNumber(),
+                        pageSupport.getPageSize(),
+                        pageSupport.getTotalElements()))
+                .map(e -> ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(e))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+
     }
 
 }

@@ -1,12 +1,16 @@
 package mx.txalcala.spring_reactor_app.controllers;
 
+import java.io.File;
 import java.net.URI;
+import java.nio.file.Files;
+import java.util.Map;
 
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,7 +20,11 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +35,7 @@ import mx.txalcala.spring_reactor_app.services.IClientService;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import org.cloudinary.json.JSONObject;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 
@@ -41,6 +50,8 @@ public class ClientController {
 
     @Qualifier("clientMapper")
     private final ModelMapper modelMapper;
+
+    private final Cloudinary cloudinary;
 
     private ClientDTO convertToDto(Client model) {
         return modelMapper.map(model, ClientDTO.class);
@@ -131,6 +142,35 @@ public class ClientController {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(e))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
+
+    }
+
+    // MultipartFile: apps no reactivas (mvc)
+    // FilePart: enfoque reactivo
+    @PostMapping("/v1/upload/{id}")
+    public Mono<ResponseEntity<ClientDTO>> uploadV1(@PathVariable("id") String id,
+            @RequestPart("file") FilePart filePart) {
+        return service.findById(id)
+                .flatMap(client -> {
+                    try {
+                        File f = Files.createTempFile("temp", filePart.filename()).toFile();
+                        filePart.transferTo(f).block();
+
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> response = cloudinary.uploader().upload(f,
+                                ObjectUtils.asMap("resource_type", "auto"));
+                        JSONObject json = new JSONObject(response);
+                        String url = json.getString("url");
+
+                        client.setUrlPhoto(url);
+
+                        return service.update(id, client)
+                                .map(this::convertToDto)
+                                .map(e -> ResponseEntity.ok().body(e));
+                    } catch (Exception e) {
+                        return Mono.just(ResponseEntity.badRequest().build());
+                    }
+                });
 
     }
 
