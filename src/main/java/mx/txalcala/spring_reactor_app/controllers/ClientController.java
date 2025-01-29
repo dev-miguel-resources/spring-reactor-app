@@ -147,6 +147,7 @@ public class ClientController {
 
     // MultipartFile: apps no reactivas (mvc)
     // FilePart: enfoque reactivo
+    // Alternativa 1
     @PostMapping("/v1/upload/{id}")
     public Mono<ResponseEntity<ClientDTO>> uploadV1(@PathVariable("id") String id,
             @RequestPart("file") FilePart filePart) {
@@ -171,6 +172,33 @@ public class ClientController {
                         return Mono.just(ResponseEntity.badRequest().build());
                     }
                 });
+
+    }
+
+    // Alternativa 2: más técnica
+    @PostMapping("/v2/upload/{id}")
+    public Mono<ResponseEntity<ClientDTO>> uploadV2(@PathVariable("id") String id,
+            @RequestPart("file") FilePart filePart) {
+        return Mono.fromCallable(() -> { // Esto es para evitar el try/catch
+            return Files.createTempFile("temp", filePart.filename()).toFile();
+        })
+                .flatMap(tempFile -> filePart.transferTo(tempFile)
+                        .then(service.findById(id)
+                                .flatMap(client -> {
+                                    return Mono.fromCallable(() -> {
+                                        @SuppressWarnings("unchecked")
+                                        Map<String, Object> response = cloudinary.uploader().upload(tempFile,
+                                                ObjectUtils.asMap("resource_type", "auto"));
+                                        JSONObject json = new JSONObject(response);
+                                        String url = json.getString("url");
+
+                                        client.setUrlPhoto(url);
+
+                                        return service.update(id, client) // Mono<Client>
+                                                .map(this::convertToDto) // ClientDTO
+                                                .map(e -> ResponseEntity.ok().body(e)); // ResponseEntity<ClientDto>
+                                    }).flatMap(mono -> mono); // resultado a mono
+                                })));
 
     }
 
