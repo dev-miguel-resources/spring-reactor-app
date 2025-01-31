@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import mx.txalcala.spring_reactor_app.dtos.ClientDTO;
 import mx.txalcala.spring_reactor_app.models.Client;
 import mx.txalcala.spring_reactor_app.services.IClientService;
+import mx.txalcala.spring_reactor_app.validator.RequestValidator;
 import reactor.core.publisher.Mono;
 
 import static org.springframework.web.reactive.function.BodyInserters.fromValue;
@@ -25,6 +26,8 @@ public class ClientHandler {
 
     @Qualifier("clientMapper")
     private final ModelMapper modelMapper;
+
+    private final RequestValidator requestValidator;
 
     private ClientDTO convertToDto(Client model) {
         return modelMapper.map(model, ClientDTO.class);
@@ -61,7 +64,7 @@ public class ClientHandler {
         Mono<ClientDTO> monoClientDTO = request.bodyToMono(ClientDTO.class);
 
         return monoClientDTO
-                // .flatMap(validarlo)
+                .flatMap(requestValidator::validate)
                 .flatMap(e -> service.save(convertToDocument(e)))
                 .map(this::convertToDto)
                 .flatMap(e -> ServerResponse
@@ -78,7 +81,7 @@ public class ClientHandler {
                     e.setId(id);
                     return e;
                 })
-                // .flatMap(validacion)
+                .flatMap(requestValidator::validate)
                 .flatMap(e -> service.update(id, convertToDocument(e)))
                 .map(this::convertToDto)
                 .flatMap(e -> ServerResponse
