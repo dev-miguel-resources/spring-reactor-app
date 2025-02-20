@@ -14,6 +14,7 @@ import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import lombok.RequiredArgsConstructor;
 
 import java.io.InputStream;
@@ -45,7 +46,8 @@ public class InvoiceServiceImpl extends CRUDImpl<Invoice, String> implements IIn
                 .map(client -> {
                     invoice.setClient(client);
                     return invoice;
-                });
+                })
+                .delaySubscription(Duration.ofSeconds(2));
     }
 
     private Mono<Invoice> populateItems(Invoice invoice) {
@@ -78,11 +80,31 @@ public class InvoiceServiceImpl extends CRUDImpl<Invoice, String> implements IIn
 
     @Override
     public Mono<byte[]> generateReport(String idInvoice) {
+        long startTime = System.currentTimeMillis();
+
         return invoiceRepo.findById(idInvoice)
-                .flatMap(this::populateClient)
-                .flatMap(this::populateItems)
+                .subscribeOn(Schedulers.single()) // esto lo resuelvo con un hilo single
+                .publishOn(Schedulers.newSingle("th-data")) // nuevo hilo
+                .flatMap(invoice -> Mono.zip(
+                        populateClient(invoice),
+                        populateItems(invoice),
+                        (populatedClient, populatedItems) -> populatedItems)) // resultado combinado en una sola fuente
+                .publishOn(Schedulers.boundedElastic())
                 .map(this::generatePDF)
-                .onErrorResume(e -> Mono.empty());
+                .onErrorResume(e -> Mono.empty())
+                // una vez completada la ejecución haremos algo más
+                .doOnSuccess(inv -> {
+                    long endTime = System.currentTimeMillis(); // tiempo de termino
+                    System.out.println("Total time: " + (endTime - startTime) + " ms");
+                });
+
+        /*
+         * return invoiceRepo.findById(idInvoice)
+         * .flatMap(this::populateClient)
+         * .flatMap(this::populateItems)
+         * .map(this::generatePDF)
+         * .onErrorResume(e -> Mono.empty());
+         */
 
     }
 

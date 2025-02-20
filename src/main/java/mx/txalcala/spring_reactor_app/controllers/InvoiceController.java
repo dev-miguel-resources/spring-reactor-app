@@ -159,6 +159,8 @@ public class InvoiceController {
 
         }
 
+        // Espectro Inicial: [5.12 - 8.12]
+        // Espectro Final: [3.09 - 5.09]
         @GetMapping("/generateReport/{id}")
         public Mono<ResponseEntity<byte[]>> generateReport(@PathVariable("id") String id) {
                 return service.generateReport(id)
